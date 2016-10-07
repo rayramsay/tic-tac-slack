@@ -1,15 +1,12 @@
-import os
-
 from flask import Flask, request, jsonify, abort
+from logic import Command
 
 app = Flask(__name__)
 
-# Remember to ``source secrets.sh``!
-SLACK_TOKEN = os.environ['SLACK_TOKEN']
 
 @app.route('/ttt', methods=['POST'])
 def parse():
-    """Parse the command parameters, validate them, and respond."""
+    """Instantiates a command object and responds to it."""
 
     token = request.form.get('token', None)
     team_id = request.form.get('team_id', None)
@@ -22,33 +19,16 @@ def parse():
     text = request.form.get('text', None)
     response_url = request.form.get('response_url', None)
 
-    # Validate the token.
-    if not token or token != SLACK_TOKEN:
+    print text
+
+    command = Command(token, team_id, team_domain, channel_id, channel_name, user_id, user_name, command, text, response_url)
+
+    if not command.token_is_valid():
         abort(400)
 
-    # Validate the text.
-    if text:
-        text = text.lower()
+    response = command.execute()
 
-    if not text or text == 'help' or text not in ['play', 'board']:
-        return jsonify({
-            "response_type": "ephemeral",  # Only displays to that user.
-            "text": "*How to use /ttt.*",
-            "attachments": [{
-                "mrkdwn_in": ["text"],
-                "text": "To start a game, type `/ttt play @[username]`. \
-To see the current board and whose turn it is, type `/ttt board`. \
-If it's your turn, type `/ttt move [square].`\n \
-```\
-| A1 | A2 | A3 |\n\
-|----+----+----|\n\
-| B1 | B2 | B3 |\n\
-|----+----+----|\n\
-| C1 | C2 | C3 |\n\
-```\
-"
-                }]
-        })
+    return jsonify(response)
 
 
 ################################################################################
@@ -57,12 +37,6 @@ if __name__ == "__main__":
 
     # Set debug = True in order to invoke the DebugToolbarExtension.
     app.debug = True
-
-    # Use the DebugToolbarExtension.
-    # DebugToolbarExtension(app)
-
-    # There's currently a bug in flask 0.11 that prevents template reloading.
-    app.jinja_env.auto_reload = True
 
     # Connect to database.
     #connect_to_db(app)
