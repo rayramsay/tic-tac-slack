@@ -1,15 +1,11 @@
 import os
 
 from flask import Flask, request, jsonify, abort
-# from flask_debugtoolbar import DebugToolbarExtension
 
 app = Flask(__name__)
 
 # Remember to ``source secrets.sh``!
 SLACK_TOKEN = os.environ['SLACK_TOKEN']
-
-# Required to use Flask sessions and the debug toolbar.
-app.secret_key = os.environ['FLASK_SECRET_KEY']
 
 @app.route('/ttt', methods=['POST'])
 def parse():
@@ -30,7 +26,29 @@ def parse():
     if not token or token != SLACK_TOKEN:
         abort(400)
 
-    return "It's alive!"
+    # Validate the text.
+    if text:
+        text = text.lower()
+
+    if not text or text == 'help' or text not in ['play', 'board']:
+        return jsonify({
+            "response_type": "ephemeral",  # Only displays to that user.
+            "text": "*How to use /ttt.*",
+            "attachments": [{
+                "mrkdwn_in": ["text"],
+                "text": "To start a game, type `/ttt play @[username]`. \
+To see the current board and whose turn it is, type `/ttt board`. \
+If it's your turn, type `/ttt move [square].`\n \
+```\
+| A1 | A2 | A3 |\n\
+|----+----+----|\n\
+| B1 | B2 | B3 |\n\
+|----+----+----|\n\
+| C1 | C2 | C3 |\n\
+```\
+"
+                }]
+        })
 
 
 ################################################################################
