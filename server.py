@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, abort
 from logic import Command
+from model import Channel, connect_to_db, db
 
 app = Flask(__name__)
 
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     app.debug = True
 
     # Connect to database.
-    #connect_to_db(app)
+    connect_to_db(app)
 
     # Must specify host for Vagrant.
     app.run(host="0.0.0.0")
