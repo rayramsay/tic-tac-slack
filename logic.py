@@ -1,6 +1,6 @@
 import os
 from slackclient import SlackClient
-from model import Channel
+from model import Channel, Game
 
 # Remember to ``source secrets.sh``!
 COMMAND_TOKEN = os.environ['COMMAND_TOKEN']
@@ -33,6 +33,16 @@ If it's your turn, type `/ttt move [square].`\n \
 | C1 | C2 | C3 |\n\
 ```\
 "
+        },
+        "game_already": {
+            "response_type": "ephemeral",
+            "text": "I'm sorry, there's already a game in this channel. \
+Each channel can only host one game at a time. Type `/ttt board` to see the game in progress."
+        },
+        "no_player2": {
+            "response_type": "ephemeral",
+            "text": "I'm sorry, the person you want to play isn't on this team. \
+Please make sure you spelled their username correctly."
         }
     }
 
@@ -54,49 +64,54 @@ If it's your turn, type `/ttt move [square].`\n \
         """Validates the token by comparing it to global variable COMMAND_TOKEN."""
         return self.token == COMMAND_TOKEN
 
+    def play(self, texts):
+        """Actions to take if texts[0] is `play`."""
+
+        # The word "play" should be followed by @username only.
+        if len(texts) != 2:
+            return self.responses["help"]
+
+        elif texts[1].startswith("@"):
+
+            # Verify that the @'d user is on the team.
+            player2 = texts[1][1:]
+            player2_id = find_id_by_name(player2)
+            if not player2_id:
+                return self.responses["no_player2"]
+
+            channel = Channel.read(self.channel_id)
+
+            # If this channel is not yet in the database, add it.
+            if not channel:
+                Channel.create(self.channel_id)
+
+            else:
+                # Check that there's not already a game in this channel.
+                if channel.game_id:
+                    return self.responses["game_already"]
+
+               # Since this channel does not have an active game, create one.
+                Game.create(self.channel_id, self.user_id, player2_id)
+                game = Game.read_by_channel(self.channel_id)
+
+                formatted_board = game.format_board()
+                response = {
+                    "response_type": "ephemeral",
+                    "text": "{}".format(formatted_board)
+                    }
+                return response
+
     def execute(self):
         """Responds appropriately to text attribute."""
+
+        if not self.text:
+            return self.responses["help"]
 
         #Split text string into list of words.
         texts = self.text.split()
 
         if texts[0] == "play":
-
-            # The word "play" should be followed by a user's @.
-            if len(texts) != 2:
-                return self.responses["help"]
-
-            elif texts[1].startswith("@"):
-
-                # Verify that the @'d user is on the team.
-                player2 = texts[1][1:]
-                player2_id = find_id_by_name(player2)
-
-                if not player2_id:
-                    # TODO: Add pensive emoji to response.
-                    response = {
-                        "response_type": "ephemeral",
-                        "text": "I don't think {} is on this team.".format(player2)
-                    }
-                    return response
-
-                # Since player 2 is on the team, check that there's not already
-                # a game in this channel.
-
-                channel = Channel.read(self.channel_id)
-
-                # If this channel is not yet in the database, add it.
-                if not channel:
-                    Channel.create(self.channel_id)
-
-                # If this channel does not have an active game, create one and update channel.
-                elif not channel.game_id:
-                    pass
-
-            else:
-                response = self.responses["help"]
+            self.play(texts)
 
         else:
-            response = self.responses["help"]
-
-        return response
+            return self.responses["help"]
