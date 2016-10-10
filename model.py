@@ -5,44 +5,13 @@ import json
 db = SQLAlchemy()
 
 
-class Channel(db.Model):
-    """Channel object to keep track of whether there's an active game in this channel."""
-
-    __tablename__ = "channels"
-
-    channel_id = db.Column(db.String(64), primary_key=True)
-    game_id = db.Column(db.Integer, nullable=True)
-
-    def __repr__(self):
-        """Provide a human-readable representation of an instance of a channel."""
-
-        return "<Channel id=%s game_id=%s>" %  \
-            (self.channel_id,
-             self.game_id)
-
-    @classmethod
-    def create(cls, channel_id):
-        """Given channel id, adds new channel to the database."""
-
-        channel = cls(channel_id=channel_id)
-        db.session.add(channel)
-        db.session.commit()
-
-    @classmethod
-    def read(cls, channel_id):
-        """Given channel id, queries database for record and returns channel object if
-        available."""
-
-        return cls.query.filter(cls.channel_id == channel_id).first()
-
-
 class Game(db.Model):
     """Game object."""
 
     __tablename__ = "games"
 
     game_id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    channel_id = db.Column(db.String, db.ForeignKey("channels.channel_id"), nullable=False)
+    channel_id = db.Column(db.String(64), nullable=False)
     active = db.Column(db.Boolean, nullable=False, default=True)
     player1_id = db.Column(db.String(64), nullable=False)
     player2_id = db.Column(db.String(64), nullable=False)
@@ -51,7 +20,7 @@ class Game(db.Model):
     winner = db.Column(db.String(64), nullable=True)
 
     def __repr__(self):
-        """Provide a human-readable representation of an instance of a user."""
+        """Provides a human-readable representation of an instance of a game."""
 
         return "<Game id=%s channel_id=%s player1_id=%s player2_id=%s active_player=%s board=%s active=%s winner=%s>" % \
             (self.game_id,
@@ -65,23 +34,23 @@ class Game(db.Model):
 
     @classmethod
     def create(cls, channel_id, player1_id, player2_id):
-        """Create a new game."""
+        """Creates a new game in the database."""
 
         active_player = random.choice([player1_id, player2_id])
-
         game = cls(channel_id=channel_id, player1_id=player1_id, player2_id=player2_id, active_player=active_player)
         db.session.add(game)
-
         db.session.commit()
 
     @classmethod
-    def read_by_channel(cls, channel_id):
-        """Given channel id, queries database for record and returns active game object if
-        available."""
+    def read(cls, channel_id):
+        """Given a channel id, queries database for active game and returns game
+        object if available."""
 
         return cls.query.filter(cls.channel_id == channel_id, cls.active.is_(True)).first()
 
     def format_board(self):
+        """Takes board stored as JSON string and formats it for display in chat."""
+
         board = json.loads(self.board)
         formatted_board = ""
         for i in range(len(board)):
@@ -97,6 +66,14 @@ class Game(db.Model):
             if i < len(board) - 1:
                 formatted_board += "|---+---+---|\n"
         return formatted_board
+
+    def display_board(self, response_type):
+        formatted_board = self.format_board()
+        response = {
+            "response_type": response_type,
+            "text": "It's <@{}>'s turn!\n```{}```".format(self.active_player, formatted_board)
+            }
+        return response
 
 
 def connect_to_db(app):

@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify, abort
 from logic import Command
-from model import Channel, connect_to_db, db
+from model import connect_to_db
 
 app = Flask(__name__)
 
 
 @app.route('/ttt', methods=['POST'])
-def parse():
+def parse_command():
     """Instantiates a command object and responds to it."""
 
     token = request.form.get('token', None)
@@ -20,11 +20,9 @@ def parse():
     text = request.form.get('text', None)
     response_url = request.form.get('response_url', None)
 
-    print text
-
     command = Command(token, team_id, team_domain, channel_id, channel_name, user_id, user_name, command, text, response_url)
 
-    if not command.token_is_valid():
+    if not command.is_valid():
         abort(400)
 
     response = command.execute()
@@ -36,7 +34,6 @@ def parse():
 
 if __name__ == "__main__":
 
-    # Set debug = True in order to invoke the DebugToolbarExtension.
     app.debug = True
 
     # Connect to database.
