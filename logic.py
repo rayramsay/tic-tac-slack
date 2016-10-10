@@ -50,6 +50,12 @@ You're welcome to start one! Type `/ttt play @[username]`."
             "text": "I'm sorry, the person you want to play with isn't on this team. \
 Please check that you spelled their username correctly."
         },
+        "not_legal": {
+            "response_type": "ephemeral",
+            "text": "I'm sorry, that's not a legal move. \
+Type `/ttt board` to see which squares are occupied or \
+`/ttt help` if you're not sure how to refer to the square you want."
+        },
         "not_turn": {
             "response_type": "ephemeral",
             "text": "I'm sorry, it's not your turn. Type `/ttt board` to see whose turn it is."
@@ -71,13 +77,13 @@ Please check that you spelled their username correctly."
         self.response_url = response_url
 
     def is_valid(self):
-        """Validates the token."""
+        """Verifies the request by validating the payload token."""
         return self.token == COMMAND_TOKEN
 
     def board(self, texts):
         """Displays the board (if available) to the user."""
 
-        game = Game.read(self.channel_id)
+        game = Game.get_by_channel(self.channel_id)
 
         # Check that there is a game to display.
         if not game:
@@ -92,7 +98,7 @@ Please check that you spelled their username correctly."
         if texts[1].startswith("@"):
 
             # Check that there's not already a game in this channel.
-            if Game.read(self.channel_id):
+            if Game.get_by_channel(self.channel_id):
                 return self.responses["game_already"]
 
             # Verify that the @'d user is on the team.
@@ -103,7 +109,7 @@ Please check that you spelled their username correctly."
 
            # Since this channel does not have an active game, create one.
             Game.create(self.channel_id, self.user_id, player2_id)
-            game = Game.read(self.channel_id)
+            game = Game.get_by_channel(self.channel_id)
 
             return game.display_board("in_channel")
 
@@ -111,10 +117,11 @@ Please check that you spelled their username correctly."
             return self.responses["help"]
 
     def move(self, texts):
-        """Records move if appropriate."""
+        """Makes user's move."""
 
+        move = texts[1]
         moves = ['a1', 'a2', 'a3', 'b1', 'b2', 'b3', 'c1', 'c2', 'c3']
-        game = Game.read(self.channel_id)
+        game = Game.get_by_channel(self.channel_id)
 
         # Check that there's a game to play.
         if not game:
@@ -125,11 +132,24 @@ Please check that you spelled their username correctly."
             return self.responses["not_turn"]
 
         # Check that it's a legal move.
-        if texts[1] in moves:
-            pass
+        if move not in moves or not game.is_legal(move):
+            return self.responses["not_legal"]
+
+        # Record the move.
+        game.mark(move)
+
+        if game.is_solved():
+            response = game.display_board("in_channel", "won")
+            game.archive()
+
+        elif game.is_draw():
+            response = game.display_board("in_channel", "draw")
+            game.archive()
 
         else:
-            return self.responses["help"]
+            response = game.display_board("in_channel")
+
+        return response
 
     def execute(self):
         """Responds appropriately to text attribute."""
