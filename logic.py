@@ -63,7 +63,7 @@ Type `/ttt board` to see which squares are occupied or \
     }
 
     def __init__(self, token, team_id, team_domain, channel_id, channel_name, user_id, user_name, command, text, response_url):
-        """Instantiates a command."""
+        """Instantiates a command object."""
 
         self.token = token
         self.team_id = team_id
@@ -139,7 +139,7 @@ Type `/ttt board` to see which squares are occupied or \
         game.mark(move)
 
         if game.is_solved():
-            response = game.display_board("in_channel", "won")
+            response = game.display_board("in_channel", "solved")
             game.archive()
 
         elif game.is_draw():
@@ -147,6 +147,8 @@ Type `/ttt board` to see which squares are occupied or \
             game.archive()
 
         else:
+            # Switch whose turn it is before making the response.
+            game.swap_active_player()
             response = game.display_board("in_channel")
 
         return response
@@ -166,7 +168,7 @@ Type `/ttt board` to see which squares are occupied or \
         elif texts[0] == "move" and len(texts) == 2:
             return self.move(texts)
 
-        # The word `board` should not be followed by anything else.
+        # `board` should not be followed by anything else.
         elif texts[0] == "board" and len(texts) == 1:
             return self.board(texts)
 

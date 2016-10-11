@@ -53,7 +53,7 @@ class Game(db.Model):
 
         board = json.loads(self.board)
         formatted_board = ""
-        for i in range(len(board)):
+        for i in xrange(len(board)):
             formatted_board += "|"
             for item in board[i]:
                 formatted_board += " "
@@ -68,8 +68,8 @@ class Game(db.Model):
         return formatted_board
 
     def display_board(self, response_type, situation="ongoing"):
-        """Creates either an ephemeral or an in_channel response with the current
-        player and a formatted board."""
+        """Creates either an ephemeral or an in_channel response with the
+        formatted board and other information appropriate to the situation."""
 
         formatted_board = self.format_board()
 
@@ -78,7 +78,7 @@ class Game(db.Model):
                 "response_type": response_type,
                 "text": "It's <@{}>'s turn!\n```{}```".format(self.active_player, formatted_board)
                 }
-        elif situation == "won":
+        elif situation == "solved":
             response = {
                 "response_type": response_type,
                 "text": "<@{}> won!\n```{}```".format(self.winner, formatted_board)
@@ -104,7 +104,7 @@ class Game(db.Model):
                    "b1": board[1][0], "b2": board[1][1], "b3": board[1][2],
                    "c1": board[2][0], "c2": board[2][1], "c3": board[2][2]}
 
-        # If the square is occupied (not None), it's not a legal move.
+        # If the square is occupied (i.e., not None), it's not a legal move.
         if squares[move]:
             return False
 
@@ -131,7 +131,11 @@ class Game(db.Model):
 
         self.board = json.dumps(board)
 
-        # Switch whose turn it is.
+        db.session.commit()
+
+    def swap_active_player(self):
+        """Switches the active player."""
+
         if self.active_player == self.player1_id:
             self.active_player = self.player2_id
         else:
@@ -157,14 +161,7 @@ class Game(db.Model):
             solved = True
 
         if solved:
-            # Because making a move swaps the active player, when the board is
-            # evaluated, the inactive player made the winning move.
-            if self.active_player == self.player1_id:
-                winner = self.player2_id
-            else:
-                winner = self.player1_id
-
-            self.winner = winner
+            self.winner = self.active_player
             db.session.commit()
 
         return solved
@@ -191,7 +188,7 @@ class Game(db.Model):
 def connect_to_db(app):
     """Connect the database to our Flask app."""
 
-    # Configure to use our PstgreSQL database.
+    # Configure to use our PostgreSQL database.
     app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///ttt'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.app = app
