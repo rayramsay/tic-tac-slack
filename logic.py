@@ -21,11 +21,21 @@ def find_id_by_name(name):
 class Command(object):
 
     responses = {
+        "diff_player":
+        {
+            "response_type": "ephemeral",
+            "text": "I'm sorry, but you can't play against yourself."
+        },
+        "game_already": {
+            "response_type": "ephemeral",
+            "text": "I'm sorry, there's already a game being played in this channel. \
+Each channel can only host one game at a time. Type `/ttt board` to see the game in progress."
+        },
         "help": {
             "response_type": "ephemeral",
             "text": "To start a game, type `/ttt play @[username]`. \
 To see the current board and whose turn it is, type `/ttt board`. \
-If it's your turn, type `/ttt move [square]`.\n \
+If it's your turn, type `/ttt move [square]` (or `/ttt resign` to quit).\n \
 ```\
 | A1 | A2 | A3 |\n\
 |----+----+----|\n\
@@ -34,11 +44,6 @@ If it's your turn, type `/ttt move [square]`.\n \
 | C1 | C2 | C3 |\n\
 ```\
 "
-        },
-        "game_already": {
-            "response_type": "ephemeral",
-            "text": "I'm sorry, there's already a game being played in this channel. \
-Each channel can only host one game at a time. Type `/ttt board` to see the game in progress."
         },
         "no_game": {
             "response_type": "ephemeral",
@@ -54,7 +59,7 @@ Please check that you spelled their username correctly."
             "response_type": "ephemeral",
             "text": "I'm sorry, that's not a legal move. \
 Type `/ttt board` to see which squares are occupied or \
-`/ttt help` if you're not sure how to refer to the square you want."
+`/ttt help` if you're not sure how to refer to the square that you want."
         },
         "not_turn": {
             "response_type": "ephemeral",
@@ -103,11 +108,15 @@ Type `/ttt board` to see which squares are occupied or \
 
             # Verify that the @'d user is on the team.
             player2 = texts[1][1:]
+
+            if self.user_name == player2:
+                return self.responses["diff_player"]
+
             player2_id = find_id_by_name(player2)
             if not player2_id:
                 return self.responses["no_player2"]
 
-           # Since this channel does not have an active game, create one.
+            # Since this channel does not have an active game, create one.
             Game.create(self.channel_id, self.user_id, player2_id)
             game = Game.get_by_channel(self.channel_id)
 
@@ -153,6 +162,28 @@ Type `/ttt board` to see which squares are occupied or \
 
         return response
 
+    def resign(self, texts):
+        """Quits the game."""
+
+        game = Game.get_by_channel(self.channel_id)
+
+        # Check that there's a game to play.
+        if not game:
+            return self.responses["no_game"]
+
+        # Check that the user is the active player.
+        if not self.user_id == game.active_player:
+            return self.responses["not_turn"]
+
+        # Swap active player and record them as winner.
+        game.swap_active_player()
+        game.record_winner()
+
+        response = game.display_board("in_channel", "solved")
+        game.archive()
+
+        return response
+
     def execute(self):
         """Responds appropriately to text attribute."""
 
@@ -168,9 +199,12 @@ Type `/ttt board` to see which squares are occupied or \
         elif texts[0] == "move" and len(texts) == 2:
             return self.move(texts)
 
-        # `board` should not be followed by anything else.
+        # `board` or `resign` should not be followed by anything else.
         elif texts[0] == "board" and len(texts) == 1:
             return self.board(texts)
+
+        elif texts[0] == "resign" and len(texts) == 1:
+            return self.resign(texts)
 
         else:
             return self.responses["help"]

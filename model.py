@@ -143,6 +143,12 @@ class Game(db.Model):
 
         db.session.commit()
 
+    def record_winner(self):
+        """Marks the active player as the winner."""
+
+        self.winner = self.active_player
+        db.session.commit()
+
     def is_solved(self):
         """Checks whether the game has been won and records winner if applicable."""
 
@@ -161,8 +167,7 @@ class Game(db.Model):
             solved = True
 
         if solved:
-            self.winner = self.active_player
-            db.session.commit()
+            self.record_winner()
 
         return solved
 
@@ -185,14 +190,22 @@ class Game(db.Model):
 
 ################################################################################
 
-def connect_to_db(app):
+def connect_to_db(app, db_uri):
     """Connect the database to our Flask app."""
 
     # Configure to use our PostgreSQL database.
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///ttt'
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.app = app
     db.init_app(app)
+
+
+def example_data():
+    """Create sample data for testing."""
+
+    game1 = Game(channel_id='C2LD6AS75', active=True, player1_id='U2KTWAQ6M', player2_id='U2LSNJM9V', active_player='U2LSNJM9V', board='[[null, null, null], [null, null, null], [null, null, null]]')
+    db.session.add(game1)
+    db.session.commit()
 
 ################################################################################
 

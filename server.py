@@ -37,7 +37,7 @@ if __name__ == "__main__":
     app.debug = True
 
     # Connect to database.
-    connect_to_db(app)
+    connect_to_db(app, 'postgresql:///ttt')
 
     # Must specify host for Vagrant.
     app.run(host="0.0.0.0")
