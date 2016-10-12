@@ -81,7 +81,7 @@ class Game(db.Model):
         elif situation == "solved":
             response = {
                 "response_type": response_type,
-                "text": "<@{}> won!\n```{}```".format(self.winner, formatted_board)
+                "text": "<@{}> won! :tada:\n```{}```".format(self.winner, formatted_board)
                 }
         elif situation == "draw":
             response = {
@@ -196,7 +196,6 @@ def connect_to_db(app, db_uri=None):
     app.config['SQLALCHEMY_DB_URI'] = db_uri or 'postgres:///ttt'
     db.app = app
     db.init_app(app)
-    print "Connected to DB."
 
 
 def example_data():
