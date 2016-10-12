@@ -6,13 +6,12 @@ import model
 class TokenTest(unittest.TestCase):
 
     def setUp(self):
-        model.connect_to_db(server.app, "postgresql:///testdb")
         self.client = server.app.test_client()
         server.app.config['TESTING'] = True
-        model.db.create_all()
+        model.connect_to_db(server.app, 'postgres:///testdb')
+        model.db.create_all(app=server.app)
 
     def tearDown(self):
-        model.db.session.close()
         model.db.drop_all()
 
     def test_bad_token(self):
@@ -33,18 +32,12 @@ class TokenTest(unittest.TestCase):
 class HelpTest(unittest.TestCase):
 
     def setUp(self):
-        # Connect to test database
-        model.connect_to_db(server.app, "postgresql:///testdb")
-
         self.client = server.app.test_client()
         server.app.config['TESTING'] = True
-
-        # Create tables and add sample data
-        model.db.create_all()
-        # model.example_data()
+        model.connect_to_db(server.app, 'postgres:///testdb')
+        model.db.create_all(app=server.app)
 
     def tearDown(self):
-        model.db.session.close()
         model.db.drop_all()
 
     def test_blank_text(self):
@@ -110,19 +103,12 @@ class HelpTest(unittest.TestCase):
 class NoGameTest(unittest.TestCase):
 
     def setUp(self):
-        # Connect to test database
-        model.connect_to_db(server.app, "postgresql:///testdb")
-
         self.client = server.app.test_client()
         server.app.config['TESTING'] = True
-
-        # Create tables and add sample data
+        model.connect_to_db(server.app, 'postgres:///testdb')
         model.db.create_all(app=server.app)
 
-        # model.example_data()
-
     def tearDown(self):
-        model.db.session.close()
         model.db.drop_all()
 
     def test_board_no_game(self):
@@ -174,22 +160,31 @@ class NoGameTest(unittest.TestCase):
         self.assertNotIn('|---+---+---|', result.data)
 
 
-class BadGameTest(unittest.TestCase):
+class GameTest(unittest.TestCase):
 
     def setUp(self):
-        # Connect to test database
-        model.connect_to_db(server.app, "postgresql:///testdb")
-
         self.client = server.app.test_client()
         server.app.config['TESTING'] = True
-
-        # Create tables and add sample data
-        model.db.create_all()
-        # model.example_data()
+        model.connect_to_db(server.app, 'postgres:///testdb')
+        model.db.create_all(app=server.app)
 
     def tearDown(self):
-        model.db.session.close()
         model.db.drop_all()
+
+    def test_at_yourself(self):
+        """A user shouldn't be able to start a game with themselves."""
+
+        payload = {
+            "token": "h5o2iRGZMlaCEIA0tKPdi3SY",
+            "channel_id": "C2LD6AS75",
+            "user_id": "U2KTWAQ6M",
+            "user_name": "oxo",
+            "command": "/ttt",
+            "text": "play @oxo"
+        }
+        result = self.client.post('/ttt', data=payload)
+        self.assertIn("can't play against yourself", result.data)
+        self.assertNotIn('|---+---+---|', result.data)
 
     def test_start_game(self):
         payload = {
