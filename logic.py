@@ -78,7 +78,7 @@ Type `/ttt board` to see which squares are occupied or \
         self.user_id = user_id
         self.user_name = user_name
         self.command = command
-        self.text = text.lower()
+        self.text = text
         self.response_url = response_url
 
     def is_valid(self):

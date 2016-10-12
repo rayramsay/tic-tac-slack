@@ -17,7 +17,7 @@ def parse_command():
     user_id = request.form.get('user_id', None)
     user_name = request.form.get('user_name', None)
     command = request.form.get('command', None)
-    text = request.form.get('text', None)
+    text = request.form.get('text', "")
     response_url = request.form.get('response_url', None)
 
     command = Command(token, team_id, team_domain, channel_id, channel_name, user_id, user_name, command, text, response_url)
