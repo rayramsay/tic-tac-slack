@@ -117,7 +117,8 @@ class NoGameTest(unittest.TestCase):
         server.app.config['TESTING'] = True
 
         # Create tables and add sample data
-        model.db.create_all()
+        model.db.create_all(app=server.app)
+
         # model.example_data()
 
     def tearDown(self):

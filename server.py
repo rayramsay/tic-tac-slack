@@ -1,6 +1,8 @@
+import os
+
 from flask import Flask, request, jsonify, abort
 from logic import Command
-from model import connect_to_db
+from model import connect_to_db, db
 
 app = Flask(__name__)
 
@@ -34,10 +36,13 @@ def parse_command():
 
 if __name__ == "__main__":
 
-    app.debug = True
-
     # Connect to database.
-    connect_to_db(app, 'postgresql:///ttt')
+    connect_to_db(app, os.environ.get('DATABASE_URL'))
 
-    # Must specify host for Vagrant.
-    app.run(host="0.0.0.0")
+    # Create the tables (if they already exist, nothing will happen).
+    db.create_all(app=app)
+
+    DEBUG = "NO_DEBUG" not in os.environ
+    PORT = int(os.environ.get("PORT", 5000))
+
+    app.run(host="0.0.0.0", port=PORT, debug=DEBUG)

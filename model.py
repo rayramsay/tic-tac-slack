@@ -190,18 +190,17 @@ class Game(db.Model):
 
 ################################################################################
 
-def connect_to_db(app, db_uri):
-    """Connect the database to our Flask app."""
+def connect_to_db(app, db_uri=None):
+    """Connect our application to our database."""
 
-    # Configure to use our PostgreSQL database.
-    app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_DB_URI'] = db_uri or 'postgres:///ttt'
     db.app = app
     db.init_app(app)
+    print "Connected to DB."
 
 
 def example_data():
-    """Create sample data for testing."""
+    """Creates sample data for testing."""
 
     game1 = Game(channel_id='C2LD6AS75', active=True, player1_id='U2KTWAQ6M', player2_id='U2LSNJM9V', active_player='U2LSNJM9V', board='[[null, null, null], [null, null, null], [null, null, null]]')
     db.session.add(game1)
